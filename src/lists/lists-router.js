@@ -72,7 +72,7 @@ listsRouter
     });
 
 listsRouter.route("/:id").all((req, res, next) => {
-    listsService.getById(req.app.get("db"), req.params.id).then((list) => {
+    ListsService.getById(req.app.get("db"), req.params.id).then((list) => {
         if (!list) {
             return res.status(404).json({
                 error: { message: `List doesn't exist` },

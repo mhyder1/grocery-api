@@ -4,12 +4,13 @@ const app = require('../src/app')
 const supertest = require('supertest')
 const { makeUsersArray } = require('./users.fixtures');
 const { makeCatArray } = require('./categories.fixtures');
-const {makeListsArray} = require('./lists.fixtures')
+const { makeListsArray } = require('./lists.fixtures')
 
 
 describe(`lists service object`, function () {
     let db;
-    
+    let authToken
+
 
     before(`setup db`, () => {
         db = knex({
@@ -43,7 +44,7 @@ describe(`lists service object`, function () {
     }
     after('disconnect from db', () => db.destroy());
 
-    before('clean the table', () => db.raw("TRUNCATE users, categories, lists RESTART IDENTITY CASCADE")); 
+    before('clean the table', () => db.raw("TRUNCATE users, categories, lists RESTART IDENTITY CASCADE"));
 
     afterEach('cleanup', () =>
         db.raw('TRUNCATE users, categories, lists RESTART IDENTITY CASCADE')
@@ -71,7 +72,7 @@ describe(`lists service object`, function () {
                     .then(() => {
                         return db.into("lists").insert(testLists);
                     });
-                
+
             });
             it("Responds with 200 and all of the lists", () => {
                 return supertest(app)
@@ -205,13 +206,231 @@ describe(`lists service object`, function () {
     });
     describe(`DELETE /api/lists/:id`, () => {
         context(`Given no lists`, () => {
-            it(`responst with 404`, () => {
+            it(`responds with 404`, () => {
                 const listId = 123456;
-                return()
-            })
-        })
-    })
+                return supertest(app)
+                    .post("/api/lists")
+                    .set("Authorization", `Bearer ${authToken}`).expect(404, { error: { message: `List doesn't exist` } });
+            });
+        });
+        context("Given there are lists in the database", () => {
+            const testUsers = makeUsersArray();
+            const testCats = makeCatArray();
+            const testLists = makeListsArray();
+
+            beforeEach("insert list", () => {
+                return db
+                    .into("users")
+                    .insert(testUsers)
+                    .then(() => {
+                        return db.into("categories").insert(testCats);
+                    })
+                    .then(() => {
+                        return db.into("lists").insert(testLists);
+                    });
+            });
+            it("responds with 204 and removes the list", () => {
+                const idToRemove = 2;
+                const expectedList = testLists.filter(
+                    (list) => list.id !== idToRemove
+                );
+                return supertest(app)
+                    .delete(`/api/lists/${idToRemove}`)
+                    .set("Authorization", `Bearer ${authToken}`)
+                    .expect(204)
+                    .then((res) => {
+                        supertest(app).get(`/api/lists`).expect(expectedList);
+                    });
+            });
+        });
+    });
+    describe(`PATCH /api/lists/:id`, () => {
+        context(`Given no lists`, () => {
+            it(`responds with 404`, () => {
+                const testId = 123456;
+                return supertest(app)
+                    .delete(`/api/lists/${testId}`)
+                    .set("Authorization", `Bearer ${authToken}`)
+                    .expect(404, { error: { message: `List doesn't exist` } });
+            });
+        });
+
+        context("Given there are lists in the database", () => {
+            const testUsers = makeUsersArray();
+            const testCats = makeCatArray();
+            const testLists = makeListsArray();
+
+            beforeEach("insert lists", () => {
+                return db
+                    .into("users")
+                    .insert(testUsers)
+                    .then(() => {
+                        return db.into("categories").insert(testCats);
+                    })
+                    .then(() => {
+                        return db.into("lists").insert(testLists);
+                    });
+            });
+            it("responds with 204 and updates the lists", () => {
+                const idToUpdate = 2;
+                const updateList = {
+                    category: "Vegetables",
+                    name: "Tomato",
+                    note: "next week new deal",
+                    price: "$2.50",
+                    weight: "2 lbs",
+                    checked: false,
+                    category_id: 1,
+                    user_id: 1,
+                };
+                const expectedList = {
+                    ...testLists[idToUpdate - 1],
+                    ...updateList,
+                };
+                return supertest(app)
+                    .patch(`/api/lists/${idToUpdate}`)
+                    .set("Authorization", `Bearer ${authToken}`)
+                    .send(updateList)
+                    .expect(204)
+                    .then((res) =>
+                        supertest(app)
+                            .get(`/api/lists/${idToUpdate}`)
+                            .set("Authorization", `Bearer ${authToken}`)
+                            .expect(expectedList)
+                    );
+            });
+            it(`responds with 400 when no required fields supplied`, () => {
+                const idToUpdate = 2;
+                return supertest(app)
+                    .patch(`/api/lists/${idToUpdate}`)
+                    .set("Authorization", `Bearer ${authToken}`)
+                    .send({ irrelevantField: "foo" })
+                    .expect(400, {
+                        error: {
+                            message: `Request body must contain either 'name' or 'note'`,
+                        },
+                    });
+            });
+            it(`responds with 204 when updating only a subset of fields`, () => {
+                const idToUpdate = 2;
+                const updateList = {
+                    title: "updated list name",
+                };
+                const expectedList = {
+                    ...testLists[idToUpdate - 1],
+                    ...updateList,
+                };
+                return supertest(app)
+                    .patch(`/api/lists/${idToUpdate}`)
+                    .set("Authorization", `Bearer ${authToken}`)
+                    .send({
+                        ...updateList,
+                        fieldToIgnore: "should not be in GET response",
+                    })
+                    .expect(204)
+                    .then((res) =>
+                        supertest(app)
+                            .get(`/api/lists/${idToUpdate}`)
+                            .set("Authorization", `Bearer ${authToken}`)
+                            .expect(expectedList)
+                    );
+            });
+        });
+    });
+    describe(`PUT /api/lists/:id`, () => {
+        context(`Given no lists`, () => {
+            it(`responds with 404`, () => {
+                const testId = 123456;
+                return supertest(app)
+                    .delete(`/api/lists/${testId}`)
+                    .set("Authorization", `Bearer ${authToken}`)
+                    .expect(404, { error: { message: `List doesn't exist` } });
+            });
+        });
+        context("Given there are lists in the database", () => {
+            const testUsers = makeUsersArray();
+            const testCats = makeCatArray();
+            const testLists = makeListsArray();
+
+            beforeEach("insert lists", () => {
+                return db
+                    .into("users")
+                    .insert(testUsers)
+                    .then(() => {
+                        return db.into("categories").insert(testCats);
+                    })
+                    .then(() => {
+                        return db.into("lists").insert(testLists);
+                    });
+            });
+            it("responds with 204 and updates the list", () => {
+                const idToUpdate = 2;
+                const updateList = {
+                    id: 2,
+                    checked: false,
+                };
+                const expectedList = {
+                    ...testLists[idToUpdate - 1],
+                    ...updateList,
+
+                    return supertest(app)
+                        .patch(`/api/lists/${idToUpdate}`)
+                        .set("Authorization", `Bearer ${authToken}`)
+                        .send(updateList)
+                        .expect(204)
+                        .then((res) =>
+                            supertest(app)
+                                .get(`/api/lists/${idToUpdate}`)
+                                .set("Authorization", `Bearer ${authToken}`)
+                                .expect(expectedList)
+                        );
+                });
+            it(`responds with 400 when no required fields supplied`, () => {
+                const idToUpdate = 2;
+                return supertest(app)
+                    .patch(`/api/lists/${idToUpdate}`)
+                    .set("Authorization", `Bearer ${authToken}`)
+                    .send({ irrelevantField: "foo" })
+                    .expect(400, {
+                        error: {
+                            message: `Request body must contain either 'note' or 'name'`,
+                        },
+                    });
+            });
+
+            it(`responds with 204 when updating only a subset of fields`, () => {
+                const idToUpdate = 2;
+                const updateList = {
+                    checked: true,
+                };
+                const expectedList = {
+                    ...testLists[idToUpdate - 1],
+                    ...updateList,
+                };
+
+                return supertest(app)
+                    .patch(`/api/lists/${idToUpdate}`)
+                    .set("Authorization", `Bearer ${authToken}`)
+                    .send({
+                        ...updateList,
+                        fieldToIgnore: "should not be in GET response",
+                    })
+                    .expect(204)
+                    .then((res) =>
+                        supertest(app)
+                            .get(`/api/lists/${idToUpdate}`)
+                            .set("Authorization", `Bearer ${authToken}`)
+                            .expect(expectedList)
+                    );
+            });
+        });
+    });
+});
 
 
-})
+
+
+
+
+
 

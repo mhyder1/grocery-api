@@ -8,7 +8,7 @@ authRouter
     knexInstance = req.app.get("db");
     next();
   })
-    .post((req, res, next) => {
+  .post((req, res, next) => {
     const { password, username, name } = req.body;
     const user = { password, username, name };
     for (const field of ["username", "password"]) {
@@ -18,10 +18,10 @@ authRouter
         });
       }
     }
-    AuthService.getUserWithUsername(knexInstance, username).then((dbUser) => {
+    AuthService.getUserWithUserName(knexInstance, username).then((dbUser) => {
       if (!dbUser) {
         return res.status(400).json({
-          error: "Incorrect username or password",
+          error: "User doesn't exist",
         });
       }
       AuthService.comparePasswords(password, dbUser.password).then(

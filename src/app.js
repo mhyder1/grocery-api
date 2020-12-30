@@ -13,8 +13,8 @@ const listsRouter = require("./lists/lists-router")
 const app = express()
 
 const morganOption = (NODE_ENV === 'production')
-    ? 'tiny'
-    : 'common';
+  ? 'tiny'
+  : 'common';
 
 
 app.use(morgan(morganOption))
@@ -23,12 +23,22 @@ app.use(express.json());
 app.use(usersRouter)
 app.use("/api/auth/", authRouter);
 app.use("/api/categories", categoriesRouter);
-app.use ("/api/lists", listsRouter)
+app.use("/api/lists", listsRouter)
 
 
-app.get('/api/gla', (req, res) => {
-    res.send('Hello, world!')
+app.get('/api', (req, res) => {
+  res.send('Hello, world!')
 })
+
+// app.use(function bearerToken(req, res, next) {
+//   const apiToken = process.env.API_TOKEN
+//   const authToken = req.get('Authorization')
+//   if (!authToken || authToken.split(' ')[1] !== apiToken) {
+//     logger.error(`Unauthorized request to path: ${req.path}`);
+//     return res.statsu(401).json({ error: "Unauthorized request"})
+//   }
+
+// })
 
 app.use(function errorHandler(error, req, res, next) {
   let response;
