@@ -1,5 +1,6 @@
 const express = require("express");
 const AuthService = require("./auth-service");
+const { requireAuth } = require('../middleware/jwt-auth')
 const authRouter = express.Router();
 
 authRouter
@@ -11,6 +12,7 @@ authRouter
   .post((req, res, next) => {
     const { password, username, name } = req.body;
     const user = { password, username, name };
+    console.log(req.body)
     for (const field of ["username", "password"]) {
       if (!req.body[field]) {
         return res.status(400).json({
@@ -19,6 +21,7 @@ authRouter
       }
     }
     AuthService.getUserWithUserName(knexInstance, username).then((dbUser) => {
+      console.log(dbUser)
       if (!dbUser) {
         return res.status(400).json({
           error: "User doesn't exist",
@@ -40,5 +43,13 @@ authRouter
       );
     });
   });
+
+  authRouter.post('/refresh', requireAuth, (req, res) => {
+    const sub = req.user.username
+    const payload = { user_id: req.user.id }
+    res.send({
+      authToken: AuthService.createJwt(sub, payload),
+    })
+  })
 
 module.exports = authRouter;

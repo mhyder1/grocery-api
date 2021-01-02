@@ -10,7 +10,5 @@ CREATE TABLE lists(
     completed_date TIMESTAMPTZ DEFAULT now() NOT NULL,
     checked BOOLEAN NOT NULL,
     user_id INTEGER 
-        REFERENCES users(id) ON DELETE CASCADE,
-    category_id INTEGER 
-        REFERENCES categories(id) ON DELETE CASCADE NOT NULL
+        REFERENCES users(id) ON DELETE CASCADE
 );
