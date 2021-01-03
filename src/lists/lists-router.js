@@ -148,8 +148,8 @@ listsRouter
       })
       .catch(next);
   })
-  // .put(requireAuth, (req, res, next) => {
-    .put( (req, res, next) => {
+  .put(requireAuth, (req, res, next) => {
+    // .put( (req, res, next) => {
     const { id, checked } = req.body;
     const listCheck = { id, checked };
     console.log(listCheck)

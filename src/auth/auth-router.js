@@ -12,7 +12,7 @@ authRouter
   .post((req, res, next) => {
     const { password, username, name } = req.body;
     const user = { password, username, name };
-    console.log(req.body)
+    // console.log(req.body)
     for (const field of ["username", "password"]) {
       if (!req.body[field]) {
         return res.status(400).json({
